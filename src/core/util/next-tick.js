@@ -12,8 +12,11 @@ let pending = false
 
 function flushCallbacks () {
   pending = false
+  // 浅拷贝
   const copies = callbacks.slice(0)
+  // 清空原 callbacks 用于之后 nextTick 使用
   callbacks.length = 0
+  // 执行
   for (let i = 0; i < copies.length; i++) {
     copies[i]()
   }
@@ -59,6 +62,8 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
   // Use MutationObserver where native Promise is not available,
   // e.g. PhantomJS, iOS7, Android 4.4
   // (#6466 MutationObserver is unreliable in IE11)
+
+  // 利用“计步器节点”重复处理
   let counter = 1
   const observer = new MutationObserver(flushCallbacks)
   const textNode = document.createTextNode(String(counter))
@@ -86,6 +91,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 
 export function nextTick (cb?: Function, ctx?: Object) {
   let _resolve
+  // 在 cb 中加上异常处理存入 callbacks 数组中
   callbacks.push(() => {
     if (cb) {
       try {
@@ -99,6 +105,7 @@ export function nextTick (cb?: Function, ctx?: Object) {
   })
   if (!pending) {
     pending = true
+    // 依次调用 cb
     timerFunc()
   }
   // $flow-disable-line

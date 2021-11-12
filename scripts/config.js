@@ -27,6 +27,7 @@ const weexFactoryPlugin = {
 
 const aliases = require('./alias')
 const resolve = p => {
+  // 根据路径前半部分去 alias 中找别名
   const base = p.split('/')[0]
   if (aliases[base]) {
     return path.resolve(aliases[base], p.slice(base.length + 1))

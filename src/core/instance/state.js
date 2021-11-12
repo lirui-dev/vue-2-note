@@ -125,6 +125,7 @@ function initData (vm: Component) {
   }
   // proxy data on instance
   const keys = Object.keys(data)
+  // props 和 methods 用于同名报错判断
   const props = vm.$options.props
   const methods = vm.$options.methods
   let i = keys.length
@@ -350,13 +351,14 @@ export function stateMixin (Vue: Class<Component>) {
     cb: any,
     options?: Object
   ): Function {
-    const vm: Component = this
+    const vm: Component = this // 获取实例
     if (isPlainObject(cb)) {
       return createWatcher(vm, expOrFn, cb, options)
     }
     options = options || {}
-    options.user = true
+    options.user = true // 标记为用户 watcher
     const watcher = new Watcher(vm, expOrFn, cb, options)
+
     if (options.immediate) {
       const info = `callback for immediate watcher "${watcher.expression}"`
       pushTarget()

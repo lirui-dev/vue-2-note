@@ -14,7 +14,9 @@ const idToTemplate = cached(id => {
   return el && el.innerHTML
 })
 
+// 缓存旧 $mount
 const mount = Vue.prototype.$mount
+// 重写 $mount 函数
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
@@ -22,6 +24,7 @@ Vue.prototype.$mount = function (
   el = el && query(el)
 
   /* istanbul ignore if */
+  // el 不能是 body 或 html
   if (el === document.body || el === document.documentElement) {
     process.env.NODE_ENV !== 'production' && warn(
       `Do not mount Vue to <html> or <body> - mount to normal elements instead.`

@@ -857,9 +857,10 @@
    * dynamically accessing methods on Array prototype
    */
 
+  // 使用 Array 原型创建新对象
   var arrayProto = Array.prototype;
   var arrayMethods = Object.create(arrayProto);
-
+  // 需增加 patch 的 Array 原型方法
   var methodsToPatch = [
     'push',
     'pop',
@@ -876,12 +877,15 @@
   methodsToPatch.forEach(function (method) {
     // cache original method
     var original = arrayProto[method];
+    // 使用 Object.defineProperty() 重新定义 Array 类型方法
     def(arrayMethods, method, function mutator () {
       var args = [], len = arguments.length;
       while ( len-- ) args[ len ] = arguments[ len ];
 
       var result = original.apply(this, args);
       var ob = this.__ob__;
+
+      // 若增加了新元素，则遍历 Array 设置响应式
       var inserted;
       switch (method) {
         case 'push':
@@ -892,6 +896,7 @@
           inserted = args.slice(2);
           break
       }
+      // 新元素设置响应式
       if (inserted) { ob.observeArray(inserted); }
       // notify change
       ob.dep.notify();
@@ -923,15 +928,21 @@
     this.value = value;
     this.dep = new Dep();
     this.vmCount = 0;
-    def(value, '__ob__', this);
+    def(value, '__ob__', this); // 将 观察器实例 挂载在 观察对象 __ob__ 中
+
     if (Array.isArray(value)) {
-      if (hasProto) {
+      // 数组 - 方法中增加数据响应式设置
+
+      if (hasProto) { // 平台是否支持原型链（__proto__）
         protoAugment(value, arrayMethods);
       } else {
         copyAugment(value, arrayMethods, arrayKeys);
       }
+
+      // 数组
       this.observeArray(value);
     } else {
+      // 非数组
       this.walk(value);
     }
   };
@@ -1025,24 +1036,30 @@
       return
     }
 
-    // cater for pre-defined getter/setters
+    // cater for pre-defined getter/setters 用户预定义 getter/setters
     var getter = property && property.get;
     var setter = property && property.set;
     if ((!getter || setter) && arguments.length === 2) {
       val = obj[key];
     }
 
+    // 对象值则进行深度监听
     var childOb = !shallow && observe(val);
+
     Object.defineProperty(obj, key, {
       enumerable: true,
       configurable: true,
       get: function reactiveGetter () {
+        // 预定义 getter
         var value = getter ? getter.call(obj) : val;
+
+        // 若当前存在依赖目标（Watcher 对象），则建立依赖
         if (Dep.target) {
-          dep.depend();
+          dep.depend(); // 依赖收集
           if (childOb) {
-            childOb.dep.depend();
+            childOb.dep.depend(); // 当前属性收集依赖
             if (Array.isArray(value)) {
+              // 当前属性的值是 array 则对其方法进行响应式改造
               dependArray(value);
             }
           }
@@ -1052,7 +1069,7 @@
       set: function reactiveSetter (newVal) {
         var value = getter ? getter.call(obj) : val;
         /* eslint-disable no-self-compare */
-        if (newVal === value || (newVal !== newVal && value !== value)) {
+        if (newVal === value || (newVal !== newVal && value !== value /* NaN 处理 */)) {
           return
         }
         /* eslint-enable no-self-compare */
@@ -3778,7 +3795,7 @@
   function initEvents (vm) {
     vm._events = Object.create(null);
     vm._hasHookEvent = false;
-    // init parent attached events
+    // init parent attached（附加的） events
     var listeners = vm.$options._parentListeners;
     if (listeners) {
       updateComponentListeners(vm, listeners);
@@ -4395,9 +4412,10 @@
    */
   function queueWatcher (watcher) {
     var id = watcher.id;
+    // 防止重复处理
     if (has[id] == null) {
       has[id] = true;
-      if (!flushing) {
+      if (!flushing) { // 队列正在被处理
         queue.push(watcher);
       } else {
         // if already flushing, splice the watcher based on its id
@@ -4443,13 +4461,15 @@
     if (isRenderWatcher) {
       vm._watcher = this;
     }
-    vm._watchers.push(this);
+    vm._watchers.push(this); // 存储所有 watcher
     // options
     if (options) {
+      // 前 4 个与 Render watcher 无关，都为 false
       this.deep = !!options.deep;
       this.user = !!options.user;
       this.lazy = !!options.lazy;
       this.sync = !!options.sync;
+      // before 用于执行更新前的钩子函数
       this.before = options.before;
     } else {
       this.deep = this.user = this.lazy = this.sync = false;
@@ -4467,6 +4487,7 @@
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn;
     } else {
+      // expOrFn 为字符串时，是 watch 对象的 user watcher
       this.getter = parsePath(expOrFn);
       if (!this.getter) {
         this.getter = noop;
@@ -4499,13 +4520,14 @@
         throw e
       }
     } finally {
+
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
       if (this.deep) {
         traverse(value);
       }
       popTarget();
-      this.cleanupDeps();
+      this.cleanupDeps(); // 清除依赖：没次读取完后清除一次
     }
     return value
   };
@@ -4724,6 +4746,7 @@
     }
     // proxy data on instance
     var keys = Object.keys(data);
+    // props 和 methods 用于同名报错判断
     var props = vm.$options.props;
     var methods = vm.$options.methods;
     var i = keys.length;
@@ -4977,6 +5000,7 @@
       // a uid
       vm._uid = uid$3++;
 
+      // 开发环境性能检测
       var startTag, endTag;
       /* istanbul ignore if */
       if (config.performance && mark) {
@@ -5084,6 +5108,8 @@
     return modified
   }
 
+  // Vue 构造函数
+  // 不用 class 目的：方便后续给 Vue 实例混入实例成员
   function Vue (options) {
     if (!(this instanceof Vue)
     ) {
@@ -5092,11 +5118,11 @@
     this._init(options);
   }
 
-  initMixin(Vue);
-  stateMixin(Vue);
-  eventsMixin(Vue);
-  lifecycleMixin(Vue);
-  renderMixin(Vue);
+  initMixin(Vue); // _init
+  stateMixin(Vue); // $data、$props、$set、$delete、$watch
+  eventsMixin(Vue); // $on、$off、$once、$emit
+  lifecycleMixin(Vue); // Vue.prototype._update（调用__patch__）、Vue.prototype.$forceUpdate、Vue.prototype.$destroy（beforeDestroy、destroyed）
+  renderMixin(Vue); // installRenderHelpers、Vue.prototype.$nextTick、Vue.prototype._render（调用选项的render）
 
   /*  */
 
@@ -5452,9 +5478,11 @@
       return obj
     };
 
+    // 初始化 Vue.options 对象
+    // ASSET_TYPES：src/shared/constants.js
     Vue.options = Object.create(null);
     ASSET_TYPES.forEach(function (type) {
-      Vue.options[type + 's'] = Object.create(null);
+      Vue.options[type + 's'] = Object.create(null); // components, directive, filter
     });
 
     // this is used to identify the "base" constructor to extend all plain-object
@@ -5463,10 +5491,10 @@
 
     extend(Vue.options.components, builtInComponents);
 
-    initUse(Vue);
-    initMixin$1(Vue);
-    initExtend(Vue);
-    initAssetRegisters(Vue);
+    initUse(Vue); // Vue.use()
+    initMixin$1(Vue); // Vue.mixin()
+    initExtend(Vue); // Vue.extend() => 组件构造函数
+    initAssetRegisters(Vue); // Vue.directive()、Vue.component()、Vue.filter()
   }
 
   initGlobalAPI(Vue);
@@ -7620,7 +7648,9 @@
     }
     var on = vnode.data.on || {};
     var oldOn = oldVnode.data.on || {};
-    target$1 = vnode.elm;
+    // vnode is empty when removing all listeners,
+    // and use old vnode dom element
+    target$1 = vnode.elm || oldVnode.elm;
     normalizeEvents(on);
     updateListeners(on, oldOn, add$1, remove$2, createOnceHandler$1, vnode.context);
     target$1 = undefined;
@@ -7628,7 +7658,8 @@
 
   var events = {
     create: updateDOMListeners,
-    update: updateDOMListeners
+    update: updateDOMListeners,
+    destroy: function (vnode) { return updateDOMListeners(vnode, emptyNode); }
   };
 
   /*  */
@@ -9180,7 +9211,7 @@
       }
     }
     if (staticClass) {
-      el.staticClass = JSON.stringify(staticClass);
+      el.staticClass = JSON.stringify(staticClass.replace(/\s+/g, ' ').trim());
     }
     var classBinding = getBindingAttr(el, 'class', false /* getStatic */);
     if (classBinding) {
@@ -11923,7 +11954,9 @@
     return el && el.innerHTML
   });
 
+  // 缓存旧 $mount
   var mount = Vue.prototype.$mount;
+  // 重写 $mount 函数
   Vue.prototype.$mount = function (
     el,
     hydrating
@@ -11931,6 +11964,7 @@
     el = el && query(el);
 
     /* istanbul ignore if */
+    // el 不能是 body 或 html
     if (el === document.body || el === document.documentElement) {
       warn(
         "Do not mount Vue to <html> or <body> - mount to normal elements instead."
@@ -12012,3 +12046,4 @@
   return Vue;
 
 }));
+//# sourceMappingURL=vue.js.map

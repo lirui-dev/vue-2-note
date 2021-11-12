@@ -54,13 +54,15 @@ export default class Watcher {
     if (isRenderWatcher) {
       vm._watcher = this
     }
-    vm._watchers.push(this)
+    vm._watchers.push(this) // 存储所有 watcher
     // options
     if (options) {
+      // 前 4 个与 Render watcher 无关，都为 false
       this.deep = !!options.deep
       this.user = !!options.user
       this.lazy = !!options.lazy
       this.sync = !!options.sync
+      // before 用于执行更新前的钩子函数
       this.before = options.before
     } else {
       this.deep = this.user = this.lazy = this.sync = false
@@ -80,6 +82,7 @@ export default class Watcher {
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
+      // expOrFn 为字符串时，是 watch 对象的 user watcher
       this.getter = parsePath(expOrFn)
       if (!this.getter) {
         this.getter = noop
@@ -112,13 +115,14 @@ export default class Watcher {
         throw e
       }
     } finally {
+
       // "touch" every property so they are all tracked as
       // dependencies for deep watching
       if (this.deep) {
         traverse(value)
       }
       popTarget()
-      this.cleanupDeps()
+      this.cleanupDeps() // 清除依赖：没次读取完后清除一次
     }
     return value
   }
@@ -191,7 +195,7 @@ export default class Watcher {
         // set new value
         const oldValue = this.value
         this.value = value
-        if (this.user) {
+        if (this.user) { // 用户 watcher 加 try-catch
           const info = `callback for watcher "${this.expression}"`
           invokeWithErrorHandling(this.cb, this.vm, [value, oldValue], this.vm, info)
         } else {

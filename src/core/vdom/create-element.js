@@ -33,6 +33,7 @@ export function createElement (
   normalizationType: any,
   alwaysNormalize: boolean
 ): VNode | Array<VNode> {
+  // 处理选项
   if (Array.isArray(data) || isPrimitive(data)) {
     normalizationType = children
     children = data
@@ -60,6 +61,7 @@ export function _createElement (
     return createEmptyVNode()
   }
   // object syntax in v-bind
+  // 动态组件 <component v-bind:is="curTabComponent"></component>
   if (isDef(data) && isDef(data.is)) {
     tag = data.is
   }

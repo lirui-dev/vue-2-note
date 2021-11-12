@@ -35,23 +35,29 @@ export function toggleObserving (value: boolean) {
  * collect dependencies and dispatch updates.
  */
 export class Observer {
-  value: any;
-  dep: Dep;
+  value: any; // 观察目标
+  dep: Dep; // 依赖管理实例
   vmCount: number; // number of vms that have this object as root $data
 
   constructor (value: any) {
     this.value = value
     this.dep = new Dep()
     this.vmCount = 0
-    def(value, '__ob__', this)
+    def(value, '__ob__', this) // 将 观察器实例 挂载在 观察对象 __ob__ 中
+
     if (Array.isArray(value)) {
-      if (hasProto) {
+      // 数组 - 方法中增加数据响应式设置
+
+      if (hasProto) { // 平台是否支持原型链（__proto__）
         protoAugment(value, arrayMethods)
       } else {
         copyAugment(value, arrayMethods, arrayKeys)
       }
+
+      // 数组
       this.observeArray(value)
     } else {
+      // 非数组
       this.walk(value)
     }
   }
@@ -146,24 +152,30 @@ export function defineReactive (
     return
   }
 
-  // cater for pre-defined getter/setters
+  // cater for pre-defined getter/setters 用户预定义 getter/setters
   const getter = property && property.get
   const setter = property && property.set
   if ((!getter || setter) && arguments.length === 2) {
     val = obj[key]
   }
 
-  let childOb = !shallow && observe(val)
+  // 深度观察
+  let childOb = !shallow && observe(val) // => Observer 实例
+
   Object.defineProperty(obj, key, {
     enumerable: true,
     configurable: true,
     get: function reactiveGetter () {
+      // 预定义 getter
       const value = getter ? getter.call(obj) : val
+
+      // 若当前存在依赖目标（Watcher 对象），则建立依赖
       if (Dep.target) {
-        dep.depend()
+        dep.depend() // 依赖收集
         if (childOb) {
-          childOb.dep.depend()
+          childOb.dep.depend() // 子属性也进行依赖收集
           if (Array.isArray(value)) {
+            // 当前属性的值是 array 则对其方法进行响应式改造
             dependArray(value)
           }
         }
@@ -173,7 +185,7 @@ export function defineReactive (
     set: function reactiveSetter (newVal) {
       const value = getter ? getter.call(obj) : val
       /* eslint-disable no-self-compare */
-      if (newVal === value || (newVal !== newVal && value !== value)) {
+      if (newVal === value || (newVal !== newVal && value !== value /* NaN 处理 */)) {
         return
       }
       /* eslint-enable no-self-compare */
@@ -204,16 +216,19 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
   ) {
     warn(`Cannot set reactive property on undefined, null, or primitive value: ${(target: any)}`)
   }
+  // 数组处理
   if (Array.isArray(target) && isValidArrayIndex(key)) {
     target.length = Math.max(target.length, key)
-    target.splice(key, 1, val)
+    target.splice(key, 1, val) // 带有响应式方法
     return val
   }
+  // 是响应式对象的属性则直接赋值
   if (key in target && !(key in Object.prototype)) {
     target[key] = val
     return val
   }
   const ob = (target: any).__ob__
+  // 对象时 vue 实例 或 $data 就地返回
   if (target._isVue || (ob && ob.vmCount)) {
     process.env.NODE_ENV !== 'production' && warn(
       'Avoid adding reactive properties to a Vue instance or its root $data ' +
@@ -221,10 +236,12 @@ export function set (target: Array<any> | Object, key: any, val: any): any {
     )
     return val
   }
+  // 非响应式对象：直接赋值，不用设置响应式，以及进行通知
   if (!ob) {
     target[key] = val
     return val
   }
+  // 以上都不是，则设置响应式
   defineReactive(ob.value, key, val)
   ob.dep.notify()
   return val
@@ -251,10 +268,12 @@ export function del (target: Array<any> | Object, key: any) {
     )
     return
   }
+  // target 对象没有 key 属性直接返回
   if (!hasOwn(target, key)) {
     return
   }
   delete target[key]
+  // 非响应式对象：完成并返回，不发送通知
   if (!ob) {
     return
   }

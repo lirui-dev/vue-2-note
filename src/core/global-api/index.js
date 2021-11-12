@@ -41,7 +41,7 @@ export function initGlobalAPI (Vue: GlobalAPI) {
     defineReactive
   }
 
-  Vue.set = set
+  Vue.set = set // => ../observer/index.js
   Vue.delete = del
   Vue.nextTick = nextTick
 
@@ -51,6 +51,8 @@ export function initGlobalAPI (Vue: GlobalAPI) {
     return obj
   }
 
+  // 初始化 Vue.options 对象：options.components, options.directive, options.filte
+  // ASSET_TYPES：src/shared/constants.js
   Vue.options = Object.create(null)
   ASSET_TYPES.forEach(type => {
     Vue.options[type + 's'] = Object.create(null)
@@ -62,8 +64,8 @@ export function initGlobalAPI (Vue: GlobalAPI) {
 
   extend(Vue.options.components, builtInComponents)
 
-  initUse(Vue)
-  initMixin(Vue)
-  initExtend(Vue)
-  initAssetRegisters(Vue)
+  initUse(Vue) // Vue.use()
+  initMixin(Vue) // Vue.mixin()
+  initExtend(Vue) // Vue.extend() => 组件构造函数
+  initAssetRegisters(Vue) // Vue.directive()、Vue.component()、Vue.filter()
 }
