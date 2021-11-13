@@ -16,7 +16,7 @@ const idToTemplate = cached(id => {
 
 // 缓存旧 $mount
 const mount = Vue.prototype.$mount
-// 重写 $mount 函数
+// 重写 $mount 函数：增加 Web 模版编译成 render()
 Vue.prototype.$mount = function (
   el?: string | Element,
   hydrating?: boolean
@@ -57,8 +57,10 @@ Vue.prototype.$mount = function (
         return this
       }
     } else if (el) {
+      // 没传入 template，则获取 el 定义的 DOM Node
       template = getOuterHTML(el)
     }
+
     if (template) {
       /* istanbul ignore if */
       if (process.env.NODE_ENV !== 'production' && config.performance && mark) {

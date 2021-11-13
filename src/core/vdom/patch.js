@@ -126,7 +126,7 @@ export function createPatchFunction (backend) {
     vnode,
     insertedVnodeQueue,
     parentElm,
-    refElm,
+    refElm, // parentNode.insertBefore(newChildNode, referenceChildNode) 的插入参考节点
     nested,
     ownerArray,
     index
@@ -141,6 +141,7 @@ export function createPatchFunction (backend) {
     }
 
     vnode.isRootInsert = !nested // for transition enter check
+    // 创建组件
     if (createComponent(vnode, insertedVnodeQueue, parentElm, refElm)) {
       return
     }
@@ -163,10 +164,10 @@ export function createPatchFunction (backend) {
         }
       }
 
-      vnode.elm = vnode.ns
+      vnode.elm = vnode.ns // 处理 SVG
         ? nodeOps.createElementNS(vnode.ns, tag)
         : nodeOps.createElement(tag, vnode)
-      setScope(vnode)
+      setScope(vnode) // style scope
 
       /* istanbul ignore if */
       if (__WEEX__) {
@@ -188,10 +189,14 @@ export function createPatchFunction (backend) {
           insert(parentElm, vnode.elm, refElm)
         }
       } else {
-        createChildren(vnode, children, insertedVnodeQueue)
+        
+        createChildren(vnode, children, insertedVnodeQueue) // 子元素 => DOM
+
+        // 触发 create 钩子
         if (isDef(data)) {
           invokeCreateHooks(vnode, insertedVnodeQueue)
         }
+        
         insert(parentElm, vnode.elm, refElm)
       }
 
@@ -199,9 +204,13 @@ export function createPatchFunction (backend) {
         creatingElmInVPre--
       }
     } else if (isTrue(vnode.isComment)) {
+      // 注释节点
+
       vnode.elm = nodeOps.createComment(vnode.text)
       insert(parentElm, vnode.elm, refElm)
     } else {
+      // 文本节点
+
       vnode.elm = nodeOps.createTextNode(vnode.text)
       insert(parentElm, vnode.elm, refElm)
     }
@@ -302,10 +311,12 @@ export function createPatchFunction (backend) {
   }
 
   function invokeCreateHooks (vnode, insertedVnodeQueue) {
+    // 调用 VNode 钩子
     for (let i = 0; i < cbs.create.length; ++i) {
       cbs.create[i](emptyNode, vnode)
     }
     i = vnode.data.hook // Reuse variable
+    // 调用 组件 钩子
     if (isDef(i)) {
       if (isDef(i.create)) i.create(emptyNode, vnode)
       if (isDef(i.insert)) insertedVnodeQueue.push(vnode)
@@ -401,6 +412,8 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // patch 2：两节点数组 diff
+  // == Snabbdom：https://github.com/lirui-dev/snabbdom-2.1.0-note/blob/master/src/package/init.ts#L238
   function updateChildren (parentElm, oldCh, newCh, insertedVnodeQueue, removeOnly) {
     let oldStartIdx = 0
     let newStartIdx = 0
@@ -498,6 +511,7 @@ export function createPatchFunction (backend) {
     }
   }
 
+  // Patch 1: 两 vnode diff
   function patchVnode (
     oldVnode,
     vnode,
@@ -547,27 +561,56 @@ export function createPatchFunction (backend) {
 
     const oldCh = oldVnode.children
     const ch = vnode.children
+
+    // 执行 update 钩子
     if (isDef(data) && isPatchable(vnode)) {
+      // vnode 模块 update 钩子：节点属性/样式/事件...
       for (i = 0; i < cbs.update.length; ++i) cbs.update[i](oldVnode, vnode)
+      // 用户 update 钩子
       if (isDef(i = data.hook) && isDef(i = i.update)) i(oldVnode, vnode)
     }
+
     if (isUndef(vnode.text)) {
+      // 非 text 节点
+
+      // 处理与 Snabbdom 类似
       if (isDef(oldCh) && isDef(ch)) {
+        // 1. 新、旧节点都有子节点
+
+        // 1.1 进一步 patch 子节点数组
         if (oldCh !== ch) updateChildren(elm, oldCh, ch, insertedVnodeQueue, removeOnly)
+
+        // 新、旧节点非都有子节点情况：
       } else if (isDef(ch)) {
+        // 2. 只有新节点有子节点，旧节点没有子节点
+
         if (process.env.NODE_ENV !== 'production') {
           checkDuplicateKeys(ch)
         }
+
+        // 2.1 旧节点可能有 text 内容，进行清空
         if (isDef(oldVnode.text)) nodeOps.setTextContent(elm, '')
+
+        // 2.2 插入新节点的所有子节点
         addVnodes(elm, null, ch, 0, ch.length - 1, insertedVnodeQueue)
       } else if (isDef(oldCh)) {
+        // 3. 只有旧节点有子节点，新节点没有子节点
+
+        // 3.1 移除旧节点所有子节点
         removeVnodes(oldCh, 0, oldCh.length - 1)
       } else if (isDef(oldVnode.text)) {
+        // 以上都不是，且旧节点是 text 节点
+
         nodeOps.setTextContent(elm, '')
       }
     } else if (oldVnode.text !== vnode.text) {
+      // text 节点 & 新旧节点 text content 不相同
+
+      // 更新 text content
       nodeOps.setTextContent(elm, vnode.text)
     }
+
+    // 用户 postpatch（patch执行完后）钩子
     if (isDef(data)) {
       if (isDef(i = data.hook) && isDef(i = i.postpatch)) i(oldVnode, vnode)
     }
@@ -716,8 +759,9 @@ export function createPatchFunction (backend) {
         // patch existing root node
         patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly)
       } else {
-        if (isRealElement) {
+        if (isRealElement) { // 是真实 DOM，则是首次加载，需转换成 VNode
           // mounting to a real element
+
           // check if this is server-rendered content and if we can perform
           // a successful hydration.
           if (oldVnode.nodeType === 1 && oldVnode.hasAttribute(SSR_ATTR)) {
