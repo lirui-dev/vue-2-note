@@ -26,7 +26,9 @@ export function createCompileToFunctionFn (compile: Function): Function {
     options?: CompilerOptions,
     vm?: Component
   ): CompiledFunctionResult {
-    options = extend({}, options)
+
+    options = extend({}, options) // 避免污染 options
+
     const warn = options.warn || baseWarn
     delete options.warn
 
@@ -56,8 +58,8 @@ export function createCompileToFunctionFn (compile: Function): Function {
       return cache[key]
     }
 
-    // compile
-    const compiled = compile(template, options)
+    // 编译成函数（字符串形式） compile
+    const compiled = compile(template, options) // compiled = { render/* 函数的字符串形式 */, staticRenderFns, errors, tips }
 
     // check compilation errors/tips
     if (process.env.NODE_ENV !== 'production') {
@@ -87,10 +89,10 @@ export function createCompileToFunctionFn (compile: Function): Function {
       }
     }
 
-    // turn code into functions
+    // 函数字符串形式 => 函数 turn code into functions
     const res = {}
     const fnGenErrors = []
-    res.render = createFunction(compiled.render, fnGenErrors)
+    res.render = createFunction(compiled.render, fnGenErrors) // => new Function(compiled.render)
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
     })
@@ -109,6 +111,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
       }
     }
 
+    // 缓存 & 返回
     return (cache[key] = res)
   }
 }
